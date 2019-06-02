@@ -9,14 +9,17 @@ import sys
 import os
 import time
 
-END_POINT_SPEC_FORM = "ssl:{}:privateKey={}:certKey={}"
-#END_POINT_SPEC_FORM = "tcp:{}:interface={}"
+END_POINT_SPEC_FORM_SSL = "ssl:{}:privateKey={}:certKey={}:interface={}"
+END_POINT_SPEC_FORM_TCP = "tcp:{}:interface={}"
 
 
 class PushServer:
     def __init__(self, site):
         self.site = site
-        self.endpoint_spec = END_POINT_SPEC_FORM.format(args.port, args.certKey, args.privKey)
+        if args.ssl:
+            self.endpoint_spec = END_POINT_SPEC_FORM_SSL.format(args.port, args.certKey, args.privKey, args.interface)
+        else:
+            self.endpoint_spec = END_POINT_SPEC_FORM_TCP.format(args.port, args.interface)
         self.server = endpoints.serverFromString(reactor, self.endpoint_spec)
 
     def start(self):
@@ -60,17 +63,22 @@ class ClientDelegate:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog='Http2Hello', usage='%(prog)s certKey privKey [--port(def.443)]')
-    parser.add_argument("certKey", help="path to cert key file(pem)", type=str)
-    parser.add_argument("privKey", help="path to private Key file(pem)", type=str)
+    parser = argparse.ArgumentParser(prog='Http2Hello',
+        usage='%(prog)s [--ssl] [--certKey] [--privKey] [--port(def.443)] [--interface(def."0.0.0.0")]')
+    parser.add_argument("--ssl", action="store_true")
+    parser.add_argument("--certKey", help="path to cert key file(pem)", type=str)
+    parser.add_argument("--privKey", help="path to private Key file(pem)", type=str)
     parser.add_argument("--port", help="listening port", type=int, default=443)
+    parser.add_argument("--interface", help="bind inferface", type=str, default="0.0.0.0")
 
     try:
         args = parser.parse_args()
-        if not os.path.exists(args.certKey):
-            raise FileNotFoundError(args.certKey)
-        if not os.path.exists(args.privKey):
-            raise FileNotFoundError(args.privKey)
+        if args.certKey:
+            if not os.path.exists(args.certKey):
+                raise FileNotFoundError(args.certKey)
+        if args.privKey:
+            if not os.path.exists(args.privKey):
+                raise FileNotFoundError(args.privKey)
 
         log.startLogging(sys.stdout)
 
